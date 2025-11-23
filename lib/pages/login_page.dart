@@ -1,7 +1,9 @@
-// ==================== login_page.dart ====================
 import 'package:flutter/material.dart';
 import 'register_page.dart';
 import 'dashboard_page.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -11,10 +13,57 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
-  final usernameController = TextEditingController();
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
   bool _obscurePassword = true;
+
+  Future<void> login() async {
+    final email = emailController.text.trim();
+    final password = passwordController.text.trim();
+
+    if (email.isEmpty || password.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Email & password wajib diisi")),
+      );
+      return;
+    }
+
+    try {
+      final url = Uri.parse("http://10.250.92.85:8080/api/login");
+      final response = await http.post(
+        url,
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({"email": email, "password": password}),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+
+        final prefs = await SharedPreferences.getInstance();
+
+        // SIMPAN TOKEN + USER.ID (backend sudah menyediakan)
+        await prefs.setString("jwt_token", data["token"]);
+        await prefs.setString("user_id", data["user"]["id"].toString());
+
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text("Login berhasil")));
+
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const DashboardPage()),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Login gagal: ${response.body}")),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Error: $e")));
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -50,10 +99,7 @@ class _LoginPageState extends State<LoginPage> {
                   SizedBox(height: 8),
                   Text(
                     'Welcome back, Let\'s Continue!',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.white70,
-                    ),
+                    style: TextStyle(fontSize: 16, color: Colors.white70),
                   ),
                 ],
               ),
@@ -76,55 +122,43 @@ class _LoginPageState extends State<LoginPage> {
                     children: [
                       const SizedBox(height: 50),
 
-                      // Username Field
-                      TextField(
-                        controller: usernameController,
-                        decoration: InputDecoration(
-                          prefixIcon: const Icon(Icons.person_outline, color: Colors.grey),
-                          hintText: 'Username',
-                          hintStyle: const TextStyle(color: Colors.grey),
-                          filled: true,
-                          fillColor: Colors.white,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
-                            borderSide: const BorderSide(color: Color(0xFF8B1A1A), width: 1.5),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
-                            borderSide: const BorderSide(color: Color(0xFF8B1A1A), width: 1.5),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
-                            borderSide: const BorderSide(color: Color(0xFF8B1A1A), width: 2),
-                          ),
-                          contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
-                        ),
-                      ),
-
-                      const SizedBox(height: 20),
-
                       // Email Field
                       TextField(
                         controller: emailController,
                         decoration: InputDecoration(
-                          prefixIcon: const Icon(Icons.email_outlined, color: Colors.grey),
+                          prefixIcon: const Icon(
+                            Icons.email_outlined,
+                            color: Colors.grey,
+                          ),
                           hintText: 'Gmail.com',
                           hintStyle: const TextStyle(color: Colors.grey),
                           filled: true,
                           fillColor: Colors.white,
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(10),
-                            borderSide: const BorderSide(color: Color(0xFF8B1A1A), width: 1.5),
+                            borderSide: const BorderSide(
+                              color: Color(0xFF8B1A1A),
+                              width: 1.5,
+                            ),
                           ),
                           enabledBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(10),
-                            borderSide: const BorderSide(color: Color(0xFF8B1A1A), width: 1.5),
+                            borderSide: const BorderSide(
+                              color: Color(0xFF8B1A1A),
+                              width: 1.5,
+                            ),
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(10),
-                            borderSide: const BorderSide(color: Color(0xFF8B1A1A), width: 2),
+                            borderSide: const BorderSide(
+                              color: Color(0xFF8B1A1A),
+                              width: 2,
+                            ),
                           ),
-                          contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+                          contentPadding: const EdgeInsets.symmetric(
+                            vertical: 16,
+                            horizontal: 20,
+                          ),
                         ),
                       ),
 
@@ -135,10 +169,15 @@ class _LoginPageState extends State<LoginPage> {
                         controller: passwordController,
                         obscureText: _obscurePassword,
                         decoration: InputDecoration(
-                          prefixIcon: const Icon(Icons.lock_outline, color: Colors.grey),
+                          prefixIcon: const Icon(
+                            Icons.lock_outline,
+                            color: Colors.grey,
+                          ),
                           suffixIcon: IconButton(
                             icon: Icon(
-                              _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                              _obscurePassword
+                                  ? Icons.visibility_off
+                                  : Icons.visibility,
                               color: Colors.grey,
                             ),
                             onPressed: () {
@@ -153,17 +192,29 @@ class _LoginPageState extends State<LoginPage> {
                           fillColor: Colors.white,
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(10),
-                            borderSide: const BorderSide(color: Color(0xFF8B1A1A), width: 1.5),
+                            borderSide: const BorderSide(
+                              color: Color(0xFF8B1A1A),
+                              width: 1.5,
+                            ),
                           ),
                           enabledBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(10),
-                            borderSide: const BorderSide(color: Color(0xFF8B1A1A), width: 1.5),
+                            borderSide: const BorderSide(
+                              color: Color(0xFF8B1A1A),
+                              width: 1.5,
+                            ),
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(10),
-                            borderSide: const BorderSide(color: Color(0xFF8B1A1A), width: 2),
+                            borderSide: const BorderSide(
+                              color: Color(0xFF8B1A1A),
+                              width: 2,
+                            ),
                           ),
-                          contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+                          contentPadding: const EdgeInsets.symmetric(
+                            vertical: 16,
+                            horizontal: 20,
+                          ),
                         ),
                       ),
 
@@ -174,12 +225,7 @@ class _LoginPageState extends State<LoginPage> {
                         width: double.infinity,
                         height: 55,
                         child: ElevatedButton(
-                          onPressed: () {
-                            Navigator.pushReplacement(
-                              context,
-                              MaterialPageRoute(builder: (_) => const DashboardPage()),
-                            );
-                          },
+                          onPressed: () => login(),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFF8B1A1A),
                             shape: RoundedRectangleBorder(
@@ -215,7 +261,9 @@ class _LoginPageState extends State<LoginPage> {
                             onTap: () {
                               Navigator.push(
                                 context,
-                                MaterialPageRoute(builder: (_) => const RegisterPage()),
+                                MaterialPageRoute(
+                                  builder: (_) => const RegisterPage(),
+                                ),
                               );
                             },
                             child: const Text(

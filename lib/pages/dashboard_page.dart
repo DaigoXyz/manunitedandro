@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'productdetail.dart';
+import 'cart.dart';
+import 'profile.dart';
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
@@ -10,44 +13,88 @@ class DashboardPage extends StatefulWidget {
 class _DashboardPageState extends State<DashboardPage> {
   String selectedCategory = 'Jersey';
   String selectedGender = 'Woman';
+  String searchQuery = '';
   int currentBannerIndex = 0;
 
   final List<Map<String, dynamic>> banners = [
     {
       'title': 'The Iconic Red Jersey,\nFeel the Pride on Your Chest',
-      'image': 'assets/images/banner1.png',
+      'image': 'assets/images/banners1.png',
       'color': const Color(0xFFFFB3BA),
     },
     {
-      'title': 'Premium Training Jacket\nStyle On & Off The Pitch',
-      'image': 'assets/images/banner2.png',
+      'title': 'Premium Retro Outfit\nFeel Elegance On & Off The Pitch',
+      'image': 'assets/images/banners2.png',
       'color': const Color(0xFF4DB8AC),
     },
     {
-      'title': 'Premium Training Jacket\nStyle On & Off The Pitch',
-      'image': 'assets/images/banner1.png',
+      'title': 'Premium Jacket\nStyle On & Off The Pitch',
+      'image': 'assets/images/banners3.png',
       'color': const Color(0xFF4DB8AC),
     },
   ];
 
-  final List<Map<String, dynamic>> products = [
+final List<Map<String, dynamic>> products = [
     {
+      'id': 1,
       'name': 'Manchester United Womens 25/26 Home Jersey',
       'price': 'Rp1.375.000',
-      'image': 'assets/images/banner1.png',
+      'image': 'assets/images/jersey1.png',
+      'category': 'Jersey',
+      'gender': 'Woman',
     },
     {
-      'name': 'Manchester United Womens 25/26 Home Authentic Jersey',
-      'price': 'Rp1.916.360',
-      'image': 'assets/images/banner2.png',
+      'id': 2,
+      'name': 'Manchester United Man 25/26 Home Jersey',
+      'price': 'Rp1.375.000',
+      'image': 'assets/images/jersey2.png',
+      'category': 'Jersey',
+      'gender': 'Man',
+    },
+    {
+      'id': 3,
+      'name': 'Manchester United Mens Travel Jacket 2025',
+      'price': 'Rp1.150.000',
+      'image': 'assets/images/jacket1.png',
+      'category': 'Jacket',
+      'gender': 'Man',
+    },
+    {
+      'id': 4,
+      'name': 'Manchester United Mens Training Long 24/25',
+      'price': 'Rp799.000',
+      'image': 'assets/images/pants1.png',
+      'category': 'Pants/Short',
+      'gender': 'Man',
     },
   ];
+
+  List<Map<String, dynamic>> get filteredProducts {
+    return products.where((product) {
+      // Filter kategori
+      final matchesCategory = selectedCategory == product['category'];
+
+      // Filter gender — ALL berarti tampilkan semua
+      final matchesGender = selectedGender == 'All'
+          ? true
+          : product['gender'] == selectedGender;
+
+      // Filter search query (case-insensitive)
+      final matchesSearch = product['name'].toString().toLowerCase().contains(
+        searchQuery.toLowerCase(),
+      );
+
+      return matchesCategory && matchesGender && matchesSearch;
+    }).toList();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
+      extendBody: true, // Important for transparent navbar
       body: SafeArea(
+        bottom: false, // Allow content to extend behind navbar
         child: Column(
           children: [
             // Header
@@ -56,9 +103,14 @@ class _DashboardPageState extends State<DashboardPage> {
               child: Row(
                 children: [
                   // Profile Picture
-                  const CircleAvatar(
+                  CircleAvatar(
                     radius: 24,
-                    backgroundImage: AssetImage('assets/images/profile.png'),
+                    backgroundColor: Colors.grey[300],
+                    child: const Icon(
+                      Icons.person,
+                      size: 28,
+                      color: Colors.grey,
+                    ),
                   ),
                   const SizedBox(width: 12),
                   // Greeting
@@ -71,7 +123,7 @@ class _DashboardPageState extends State<DashboardPage> {
                           style: TextStyle(fontSize: 14, color: Colors.black54),
                         ),
                         Text(
-                          'Aretta Rizki Aryanto',
+                          'John Doe',
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
@@ -97,7 +149,17 @@ class _DashboardPageState extends State<DashboardPage> {
                       color: Colors.grey[200],
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.shopping_cart_outlined, size: 24),
+                    child: GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const CartPage(),
+                          ),
+                        );
+                      },
+                      child: const Icon(Icons.shopping_cart_outlined, size: 24),
+                    ),
                   ),
                 ],
               ),
@@ -113,7 +175,7 @@ class _DashboardPageState extends State<DashboardPage> {
 
                     // Banner Carousel
                     SizedBox(
-                      height: 180,
+                      height: 150,
                       child: PageView.builder(
                         itemCount: banners.length,
                         onPageChanged: (index) {
@@ -129,12 +191,51 @@ class _DashboardPageState extends State<DashboardPage> {
                             ),
                             child: Container(
                               decoration: BoxDecoration(
-                                color: banner['color'],
                                 borderRadius: BorderRadius.circular(20),
+                                gradient: LinearGradient(
+                                  begin: Alignment.topCenter,
+                                  end: Alignment.bottomCenter,
+                                  colors: [
+                                    banner['color'].withOpacity(0.9),
+                                    banner['color'].withOpacity(0.6),
+                                  ],
+                                ),
                               ),
                               child: Stack(
                                 children: [
-                                  // Text Content
+                                  Positioned.fill(
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(20),
+                                      child: Transform.translate(
+                                        offset: const Offset(
+                                          -50,
+                                          0,
+                                        ), // ⬅️ geser kiri 20px (ubah bebas)
+                                        child: Transform.scale(
+                                          scale:
+                                              1.15, // ⬅️ zoom image (1.0 = normal)
+                                          child: Image.asset(
+                                            banner['image'],
+                                            fit: BoxFit.fitHeight,
+                                            alignment: Alignment
+                                                .centerRight, // tetap kanan
+                                            errorBuilder:
+                                                (context, error, stackTrace) {
+                                                  return const Center(
+                                                    child: Icon(
+                                                      Icons.broken_image,
+                                                      size: 60,
+                                                      color: Colors.white54,
+                                                    ),
+                                                  );
+                                                },
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+
+                                  // TEXT
                                   Positioned(
                                     left: 20,
                                     top: 20,
@@ -142,16 +243,19 @@ class _DashboardPageState extends State<DashboardPage> {
                                       crossAxisAlignment:
                                           CrossAxisAlignment.start,
                                       children: [
-                                        Text(
-                                          banner['title'],
-                                          style: const TextStyle(
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.bold,
-                                            color: Color(0xFF8B1A1A),
-                                            height: 1.3,
+                                        SizedBox(
+                                          width: 180,
+                                          child: Text(
+                                            banner['title'],
+                                            style: const TextStyle(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.white,
+                                              height: 1.3,
+                                            ),
                                           ),
                                         ),
-                                        const SizedBox(height: 12),
+                                        const SizedBox(height: 5),
                                         ElevatedButton(
                                           onPressed: () {},
                                           style: ElevatedButton.styleFrom(
@@ -180,23 +284,13 @@ class _DashboardPageState extends State<DashboardPage> {
                                               SizedBox(width: 8),
                                               Icon(
                                                 Icons.arrow_forward,
-                                                color: Colors.white,
                                                 size: 16,
+                                                color: Colors.white,
                                               ),
                                             ],
                                           ),
                                         ),
                                       ],
-                                    ),
-                                  ),
-                                  // Player Image
-                                  Positioned(
-                                    right: 0,
-                                    bottom: 0,
-                                    child: Image.asset(
-                                      banner['image'],
-                                      height: 180,
-                                      fit: BoxFit.cover,
                                     ),
                                   ),
                                 ],
@@ -221,8 +315,8 @@ class _DashboardPageState extends State<DashboardPage> {
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             color: currentBannerIndex == index
-                                ? const Color(0xFFE53935)
-                                : Colors.grey[300],
+                                ? Colors.grey[300]
+                                : const Color(0xFFE30613),
                           ),
                         ),
                       ),
@@ -234,6 +328,11 @@ class _DashboardPageState extends State<DashboardPage> {
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16.0),
                       child: TextField(
+                        onChanged: (value) {
+                          setState(() {
+                            searchQuery = value;
+                          });
+                        },
                         decoration: InputDecoration(
                           hintText: 'Cari produk kami, di sini',
                           hintStyle: TextStyle(color: Colors.grey[400]),
@@ -251,7 +350,7 @@ class _DashboardPageState extends State<DashboardPage> {
                             vertical: 12,
                           ),
                         ),
-                      ),
+                      )
                     ),
 
                     const SizedBox(height: 24),
@@ -316,15 +415,15 @@ class _DashboardPageState extends State<DashboardPage> {
                               crossAxisSpacing: 12,
                               mainAxisSpacing: 12,
                             ),
-                        itemCount: products.length,
+                        itemCount: filteredProducts.length,
                         itemBuilder: (context, index) {
-                          final product = products[index];
+                          final product = filteredProducts[index];
                           return _buildProductCard(product);
                         },
                       ),
                     ),
 
-                    const SizedBox(height: 100),
+                    const SizedBox(height: 140), // Extra space for navbar
                   ],
                 ),
               ),
@@ -397,14 +496,23 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   Widget _buildProductCard(Map<String, dynamic> product) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.grey[200],
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ProductDetailPage(productId: product['id']),
+          ),
+        );
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.grey[200],
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
           // Product Image
           Stack(
             children: [
@@ -418,7 +526,17 @@ class _DashboardPageState extends State<DashboardPage> {
                   ),
                 ),
                 child: Center(
-                  child: Image.asset(product['image'], fit: BoxFit.cover),
+                  child: Image.asset(
+                      product['image'],
+                      fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      return const Icon(
+                        Icons.checkroom,
+                        size: 60,
+                        color: Colors.grey,
+                      );
+                    },
+                  ),
                 ),
               ),
               // Favorite Icon
@@ -466,46 +584,182 @@ class _DashboardPageState extends State<DashboardPage> {
           ),
         ],
       ),
+    ),
     );
   }
 
   Widget _buildBottomNavBar() {
-    return Container(
-      height: 70,
-      margin: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFFE53935),
-        borderRadius: BorderRadius.circular(40),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
+    return SizedBox(
+      height: 90,
+      child: Stack(
+        clipBehavior: Clip.none,
         children: [
-          IconButton(
-            onPressed: () {},
-            icon: const Icon(
-              Icons.local_offer_outlined,
-              color: Colors.white,
-              size: 28,
+          // Floating background bar dengan cekungan di atas (TRANSPARAN)
+          Positioned(
+            bottom: 50,
+            left: 20,
+            right: 20,
+            child: Container(
+              height: 65,
+              decoration: BoxDecoration(
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.2),
+                    blurRadius: 20,
+                    offset: const Offset(0, 8),
+                    spreadRadius: 2,
+                  ),
+                ],
+              ),
+              child: CustomPaint(
+                painter: BottomNavBarPainter(),
+                child: SizedBox(
+                  height: 65,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      // Left icon
+                      Expanded(
+                        child: IconButton(
+                          icon: const Icon(
+                            Icons.local_offer_outlined,
+                            color: Colors.white,
+                            size: 26,
+                          ),
+                          onPressed: () {},
+                        ),
+                      ),
+
+                      // Center spacer for floating home button
+                      const SizedBox(width: 80),
+
+                      // Right icon
+                      Expanded(
+                        child: IconButton(
+                          icon: const Icon(
+                            Icons.person_outline,
+                            color: Colors.white,
+                            size: 26,
+                          ),
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    const ProfilePage(),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ),
           ),
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(Icons.home, color: Color(0xFFE53935), size: 28),
-          ),
-          IconButton(
-            onPressed: () {},
-            icon: const Icon(
-              Icons.person_outline,
-              color: Colors.white,
-              size: 28,
+
+          // Floating Home Button (center) - positioned higher
+          Positioned(
+            bottom: 90,
+            left: MediaQuery.of(context).size.width / 2 - 32,
+            child: Container(
+              width: 64,
+              height: 64,
+              decoration: BoxDecoration(
+                color: const Color(0xFF8B1A1A),
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.25),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: const Icon(Icons.home, color: Colors.white, size: 30),
             ),
           ),
         ],
       ),
     );
   }
+}
+
+class BottomNavBarPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = const Color(0xFFE53935)
+      ..style = PaintingStyle.fill;
+
+    final path = Path();
+
+    double cornerRadius = 30;
+    double notchWidth = 120;
+    double notchDepth = 32;
+
+    // Start from top-left
+    path.moveTo(0, cornerRadius);
+    path.quadraticBezierTo(0, 0, cornerRadius, 0);
+
+    // Top edge until notch starts
+    path.lineTo(size.width / 2 - notchWidth / 2, 0);
+
+    // Left side of notch - curve going up
+    path.quadraticBezierTo(
+      size.width / 2 - notchWidth / 2 + 15,
+      0,
+      size.width / 2 - notchWidth / 2 + 20,
+      0,
+    );
+
+    // Main notch curve
+    path.quadraticBezierTo(
+      size.width / 2 - 25,
+      notchDepth,
+      size.width / 2,
+      notchDepth,
+    );
+
+    path.quadraticBezierTo(
+      size.width / 2 + 25,
+      notchDepth,
+      size.width / 2 + notchWidth / 2 - 20,
+      0,
+    );
+
+    // Right side of notch - curve back down
+    path.quadraticBezierTo(
+      size.width / 2 + notchWidth / 2 - 15,
+      0,
+      size.width / 2 + notchWidth / 2,
+      0,
+    );
+
+    // Top edge to top-right corner
+    path.lineTo(size.width - cornerRadius, 0);
+    path.quadraticBezierTo(size.width, 0, size.width, cornerRadius);
+
+    // Right edge
+    path.lineTo(size.width, size.height - cornerRadius);
+    path.quadraticBezierTo(
+      size.width,
+      size.height,
+      size.width - cornerRadius,
+      size.height,
+    );
+
+    // Bottom edge
+    path.lineTo(cornerRadius, size.height);
+    path.quadraticBezierTo(0, size.height, 0, size.height - cornerRadius);
+
+    // Left edge back to start
+    path.close();
+
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
