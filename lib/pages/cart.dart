@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'checkout.dart';
+import '/services/checkoutservice.dart';
 
 class CartPage extends StatefulWidget {
   const CartPage({super.key});
@@ -582,30 +583,30 @@ class _CartPageState extends State<CartPage> {
     );
   }
 
-  void _proceedToCheckout() {
+  void _proceedToCheckout() async {
     final selectedItems = cartItems.where((item) => item.isSelected).toList();
 
-    // Convert CartItem to CheckoutItem
-    final checkoutItems = selectedItems.map((cartItem) {
-      return CheckoutItem(
-        id: cartItem.id,
-        name: cartItem.name,
-        size: cartItem.size,
-        price: cartItem.price,
-        quantity: cartItem.quantity,
-        image: cartItem.image,
-      );
+    // Convert CartItem → Map untuk disimpan
+    final itemsToSave = selectedItems.map((cartItem) {
+      return {
+        'id': cartItem.id,
+        'name': cartItem.name,
+        'size': cartItem.size,
+        'price': cartItem.price,
+        'quantity': cartItem.quantity,
+        'image': cartItem.image,
+      };
     }).toList();
 
-    // Navigate to checkout page with selected items
+    // ⬅️ SIMPAN KE CHECKOUT SERVICE
+    await CheckoutService.saveCheckoutItems(itemsToSave);
+
+    // Navigate ke CheckoutPage
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (context) => CheckoutPage(items: checkoutItems),
-      ),
+      MaterialPageRoute(builder: (context) => const CheckoutPage()),
     ).then((_) {
-      // Reload cart when coming back from checkout
-      _loadCartItems();
+      _loadCartItems(); // reload cart setelah kembali
     });
   }
 }

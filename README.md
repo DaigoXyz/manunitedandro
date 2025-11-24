@@ -1,114 +1,130 @@
 # manunitedapk
 
-A Flutter starter app with guidance to run and build the APK for Android.
+Project Flutter untuk e‑commerce sederhana (struktur project disesuaikan dengan kode Anda).
 
-**Repository contents**
-- `lib/`: main app source (pages: `dashboard_page.dart`, `login_page.dart`, `register_page.dart`, `splashscreen.dart`, `welcome.dart`)
-- `android/`, `ios/`, `linux/`, `macos/`, `web/`, `windows/`: platform folders
-- `assets/images/`: project assets
+**Isi utama repository**
+- `lib/` — kode aplikasi:
+	- `data/`: data statis (mis. `products.dart`)
+	- `models/`: model data (mis. `shippingaddressmodel.dart`)
+	- `pages/`: UI dan route utama (contoh: `dashboard_page.dart`, `login_page.dart`, `register_page.dart`, `productdetail.dart`, `cart.dart`, `checkout.dart`, `orderhistory.dart`, `profile.dart`, `editprofile.dart`, `shipping_address.dart`, `addeditaddres.dart`, `wishlist.dart`, `splashscreen.dart`, `welcome.dart`)
+	- `services/`: layanan aplikasi (API, auth, cart, profile, address, dll.)
+- `android/`, `ios/`, `linux/`, `macos/`, `web/`, `windows/` — folder platform
+- `assets/images/` — gambar dan aset lainnya
 
-**This README** explains how to set up the project locally, run it on a device/emulator, and produce signed and unsigned Android APKs suitable for distribution.
+README ini berisi langkah untuk menjalankan project, membangun APK/AAB Android, menandatangani (sign) release, dan beberapa tips troubleshooting.
 
-**Prerequisites**
-- **Flutter SDK**: install from https://docs.flutter.dev/get-started/install (required `flutter` on PATH).
-- **Android SDK / Android Studio**: to run emulators and build Android APKs.
-- **Java JDK (keytool)**: required to generate a signing key (usually bundled with Android Studio).
-- **ADB**: for installing APKs on devices (comes with Android SDK Platform Tools).
+**Prasyarat**
+- Flutter SDK (https://docs.flutter.dev/get-started/install). Pastikan `flutter` tersedia di PATH.
+- Android SDK (Android Studio) dan set up device/emulator.
+- Java JDK (untuk `keytool`) dan ADB (Android Platform Tools).
 
-Getting the code
+Quick start — clone & jalankan
 
-```bash
+```powershell
 git clone <your-repo-url>
 cd manunitedapk
-```
-
-Install dependencies (fetch packages):
-
-```bash
 flutter pub get
-```
-
-Run the app (debug) on a connected device or emulator:
-
-```bash
 flutter run
 ```
 
-If you want to select a device/emulator explicitly:
+Pilih device eksplisit (opsional):
 
-```bash
+```powershell
 flutter devices
 flutter run -d <device-id>
 ```
 
-Build APKs
+Menjelaskan struktur kode singkat
+- `lib/pages`: setiap file halaman biasanya mengandung widget dan logic tampilan.
+- `lib/services`: tempat komunikasi ke backend (`apiservice.dart`, `authservice.dart`, dll.). Jika aplikasi membutuhkan URL base/API key, cari file `apiservice.dart` untuk menyesuaikan konfigurasi.
+- `lib/models` dan `lib/data`: model dan data statis.
 
-- Debug APK (unsigned, for quick testing):
+Build APK / AAB
 
-```bash
+- Build debug APK (cepat, tidak dioptimalkan):
+
+```powershell
 flutter build apk --debug
 ```
 
-- Release APK (optimized, unsigned):
+- Build release APK (optimasi, unsigned jika belum dikonfigurasi signing):
 
-```bash
+```powershell
 flutter build apk --release
 ```
 
-- Release App Bundle (AAB) for Play Store:
+- Build App Bundle (AAB) untuk Play Store:
 
-```bash
+```powershell
 flutter build appbundle --release
 ```
 
-Signed APK (recommended for publishing)
-
-1. Generate a keystore (run in PowerShell or Command Prompt). Replace values as needed:
+Untuk membangun beberapa APK per ABI (lebih kecil per arsitektur):
 
 ```powershell
-keytool -genkey -v -keystore release-key.jks -alias your_key_alias -keyalg RSA -keysize 2048 -validity 10000
+flutter build apk --split-per-abi
 ```
 
-2. Create a `key.properties` file in the project root (next to `pubspec.yaml`) with these contents:
+Menandatangani (Signing) untuk rilis
+
+Langkah singkat:
+
+1) Buat keystore (PowerShell / CMD):
+
+```powershell
+keytool -genkey -v -keystore release-key.jks -alias <key_alias> -keyalg RSA -keysize 2048 -validity 10000
+```
+
+2) Buat `key.properties` di root project (tidak di-commit):
 
 ```
 storePassword=<your-keystore-password>
 keyPassword=<your-key-password>
-keyAlias=your_key_alias
+keyAlias=<key_alias>
 storeFile=release-key.jks
 ```
 
-3. Configure signing in `android/app/build.gradle` or `android/app/build.gradle.kts`.
-	- If your project uses `build.gradle.kts`, follow the Kotlin DSL equivalent to load `key.properties` and set signingConfigs for `release`.
-	- Flutter's template usually already supports a signing config — adjust paths/passwords accordingly.
+Saya tambahkan `key.properties.template` di repo untuk contoh — salin file itu menjadi `key.properties` dan isi nilai Anda.
 
-4. Build the signed release APK:
+3) Konfigurasikan signing pada `android/app/build.gradle` atau `android/app/build.gradle.kts`.
+	 - Jika menggunakan template Flutter standar, tambahkan block untuk membaca `key.properties` dan mengisi `signingConfigs` untuk `release`.
+	 - Jika Anda mau, saya bisa menambahkan snippet Kotlin DSL (`build.gradle.kts`) untuk memuat `key.properties`.
 
-```bash
+4) Build release dan APK akan ditandatangani jika signing dikonfigurasi:
+
+```powershell
 flutter build apk --release
 ```
 
-The output APK will be at `build/app/outputs/flutter-apk/app-release.apk` (or similar).
+Lokasi keluaran APK/AAB
+- APK: `build/app/outputs/flutter-apk/app-release.apk`
+- Split APKs (per ABI): `build/app/outputs/flutter-apk/` (per-ABI files)
+- AAB: `build/app/outputs/bundle/release/app-release.aab`
 
-Install APK on a device (via ADB):
+Install APK ke device
 
-```bash
+```powershell
 adb install -r build/app/outputs/flutter-apk/app-release.apk
 ```
 
-Common notes and troubleshooting
-- If `flutter doctor` reports missing tooling, follow the prompts: `flutter doctor -v`.
-- If you modify `android/` Gradle scripts, run a clean build: `flutter clean` then `flutter pub get` then `flutter build apk`.
-- On Windows PowerShell, run commands shown above directly; if you face permission issues when generating keystore, run an elevated PowerShell.
+Catatan penting & troubleshooting
+- Jalankan `flutter doctor -v` jika ada masalah lingkungan.
+- Jika mengubah Gradle/Android files, jalankan `flutter clean` lalu `flutter pub get` sebelum build ulang.
+- Pastikan API base/url ada dan diatur jika `lib/services/apiservice.dart` membutuhkan konfigurasi environment.
+- Jangan commit `key.properties` atau `release-key.jks` ke repo — simpan di lokasi aman.
 
-Useful commands
-- `flutter doctor` : check environment health.
-- `flutter pub get` : fetch packages.
-- `flutter run --release` : run a release-mode app on a connected device.
-- `flutter build apk --split-per-abi` : produce multiple APKs per CPU ABI.
+Tips developer
+- Jalankan `flutter run --hot` (default `flutter run`) untuk hot reload selama pengembangan.
+- Gunakan `flutter analyze` untuk memeriksa masalah statis.
 
-Next steps
-- Add a `CHANGELOG.md` and a GitHub release process.
-- Add continuous integration (e.g., GitHub Actions) to build and upload APKs/artifacts automatically.
+Files yang mungkin ingin Anda cek cepat
+- `lib/services/apiservice.dart` — konfigurasi endpoint
+- `lib/services/authservice.dart` — login / token handling
+- `lib/pages/*` — lihat routing / navigation
 
-If you want, I can add an example `key.properties` loader snippet for `android/app/build.gradle.kts`, a sample GitHub Actions workflow, or commit the `release-key.jks` to `.gitignore`. Tell me which you'd like next.
+Next recommended steps (bisa saya bantu)
+- Tambahkan `key.properties.template` (sudah saya sertakan) dan update `.gitignore` (saya akan menambahkan entri untuk `key.properties` dan `release-key.jks`).
+- Tambahkan snippet `android/app/build.gradle.kts` untuk memuat `key.properties` (Kotlin DSL).
+- Buat GitHub Actions workflow untuk build AAB saat push ke `main`.
+
+Jika Anda ingin, saya bisa langsung menambahkan snippet `build.gradle.kts` dan workflow CI next.

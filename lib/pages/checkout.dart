@@ -1,44 +1,92 @@
 import 'package:flutter/material.dart';
 import '/services/cartservice.dart';
+import '/services/checkoutservice.dart';
+import '/models/shippingaddressmodel.dart';
+import '../services/profileservice.dart';
+import 'shipping_address.dart';
+import 'profile.dart';
 
 class CheckoutPage extends StatefulWidget {
-  final List<CheckoutItem> items;
-
-  const CheckoutPage({super.key, required this.items});
+  const CheckoutPage({super.key});
 
   @override
   State<CheckoutPage> createState() => _CheckoutPageState();
 }
 
 class _CheckoutPageState extends State<CheckoutPage> {
+  List<CheckoutItem> items = [];
   String selectedPaymentMethod = 'COD';
+  ShippingAddress? selectedAddress;
+  String? userName;
 
-  final String shippingAddress =
-      'Aretta Rizki Aryanto  (+62)811-1222-208\n'
-      'Jl. Bambu Hitam No.3, RT.3/RW.3, Bambu Apus, Kec. Cipayung, Kota Jakarta Timur, Daerah Khusus Ibukota Jakarta 13890';
+  // Check if address is set
+  bool get hasAddress => selectedAddress != null;
+
+  // Address text (only when address exists)
+  String get shippingAddressText {
+    if (selectedAddress != null) {
+      final displayName = userName ?? 'Loading...';
+      return '$displayName  ${selectedAddress!.formattedPhone}\n'
+          '${selectedAddress!.address}, ${selectedAddress!.city}, ${selectedAddress!.province} ${selectedAddress!.postalCode}';
+    }
+    return '';
+  }
 
   final double shippingCost = 200000;
 
-  double get subtotal {
-    return widget.items.fold(
-      0,
-      (sum, item) => sum + (item.price * item.quantity),
-    );
+  @override
+  void initState() {
+    super.initState();
+    _loadCheckoutItems();
+    _loadUserProfile();
   }
 
-  double get total {
-    return subtotal + shippingCost;
+Future<void> _loadUserProfile() async {
+    try {
+      final profile = await ProfileService.getMyProfile();
+      if (mounted) {
+        setState(() {
+          userName =
+              profile['name'] ?? profile['fullName'] ?? profile['username'];
+        });
+      }
+    } catch (e) {
+      print('Error loading profile: $e');
+    }
   }
+  Future<void> _loadCheckoutItems() async {
+    final raw = await CheckoutService.getCheckoutItems();
+
+    setState(() {
+      items = raw
+          .map(
+            (e) => CheckoutItem(
+              id: e['id'],
+              name: e['name'],
+              size: e['size'],
+              price: e['price'],
+              quantity: e['quantity'],
+              image: e['image'],
+            ),
+          )
+          .toList();
+    });
+  }
+
+  double get subtotal =>
+      items.fold(0, (sum, item) => sum + (item.price * item.quantity));
+
+  double get total => subtotal + shippingCost;
 
   String formatCurrency(double amount) {
-    return 'Rp${amount.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')}';
+    return 'Rp${amount.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]}.')}';
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey[50],
-      extendBody: true, // Important: makes navbar truly floating
+      extendBody: true,
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
@@ -54,106 +102,204 @@ class _CheckoutPageState extends State<CheckoutPage> {
             fontWeight: FontWeight.bold,
           ),
         ),
-        centerTitle: false,
       ),
       body: SafeArea(
-        bottom: false, // Allow content to extend behind navbar
-        child: Column(
-          children: [
-            Expanded(
-              child: SingleChildScrollView(
-                child: Column(
-                  children: [
-                    const SizedBox(height: 8),
+        bottom: false,
+        child: items.isEmpty
+            ? const Center(
+                child: Text(
+                  'Silahkan pilih barang yang ingin di checkout di cart',
+                  style: TextStyle(
+                    fontSize: 15,
+                    color: Colors.black54,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              )
+            : Column(
+                children: [
+                  Expanded(
+                    child: SingleChildScrollView(
+                      child: Column(
+                        children: [
+                          const SizedBox(height: 8),
+                          _buildShippingAddressSection(),
+                          const SizedBox(height: 8),
+                          _buildProductsSection(),
+                          const SizedBox(height: 8),
+                          _buildPaymentMethodSection(),
+                          const SizedBox(height: 8),
+                          _buildOrderSummarySection(),
+                          const SizedBox(height: 24),
 
-                    // Shipping Address Section
-                    _buildShippingAddressSection(),
-
-                    const SizedBox(height: 8),
-
-                    // Products Section
-                    _buildProductsSection(),
-
-                    const SizedBox(height: 8),
-
-                    // Payment Method Section
-                    _buildPaymentMethodSection(),
-
-                    const SizedBox(height: 8),
-
-                    // Order Summary Section
-                    _buildOrderSummarySection(),
-
-                    const SizedBox(height: 24),
-
-                    // Checkout Button (Static, not floating)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Align(
-                        alignment: Alignment.centerRight, // ⬅️ bikin ke kanan
-                        child: SizedBox(
-                          width: 200,
-                          height: 50,
-                          child: ElevatedButton(
-                            onPressed: () => _confirmCheckout(),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF8B1A1A),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              elevation: 2,
+                          // BATAL + CHECKOUT BUTTONS
+                          Padding(
+                            padding: const EdgeInsets.only(
+                              right: 15,
+                              left: 200,
                             ),
-                            child: const Text(
-                              'Checkout',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                SizedBox(
+                                  width: 200,
+                                  height: 45,
+                                  child: OutlinedButton(
+                                    onPressed: () async {
+                                      await CheckoutService.clearCheckout();
+                                      setState(() {
+                                        items = [];
+                                      });
+                                    },
+                                    style: OutlinedButton.styleFrom(
+                                      side: const BorderSide(
+                                        color: Color(0xFF8B1A1A),
+                                        width: 1.5,
+                                      ),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                    ),
+                                    child: const Text(
+                                      'Batal Checkout',
+                                      style: TextStyle(
+                                        color: Color(0xFF8B1A1A),
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+
+                                const SizedBox(height: 12),
+
+                                // Tombol Checkout
+                                SizedBox(
+                                  width: 200,
+                                  height: 50,
+                                  child: ElevatedButton(
+                                    onPressed: hasAddress
+                                        ? _confirmCheckout
+                                        : _showNoAddressWarning,
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: hasAddress
+                                          ? const Color(0xFF8B1A1A)
+                                          : Colors.grey[400],
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                    ),
+                                    child: const Text(
+                                      'Checkout',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 16,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                        ),
+                          const SizedBox(height: 120),
+                        ],
                       ),
                     ),
-                    const SizedBox(height: 120),
-                  ],
-                ),
+                  ),
+                ],
               ),
-            ),
-          ],
-        ),
       ),
       bottomNavigationBar: _buildBottomNavBar(),
     );
   }
 
   Widget _buildShippingAddressSection() {
-    return Container(
-      color: Colors.white,
-      padding: const EdgeInsets.all(16),
-      child: Row(
-        children: [
-          const Icon(Icons.location_on, color: Color(0xFFE53935), size: 24),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  shippingAddress,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    color: Colors.black87,
-                    height: 1.4,
-                  ),
-                ),
-              ],
+    return GestureDetector(
+      onTap: () => _selectAddress(),
+      child: Container(
+        color: Colors.white,
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            Icon(
+              hasAddress ? Icons.location_on : Icons.location_off_outlined,
+              color: hasAddress ? const Color(0xFFE53935) : Colors.grey[400],
+              size: 24,
             ),
-          ),
-          const Icon(Icons.chevron_right, color: Colors.grey),
-        ],
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (hasAddress)
+                    Text(
+                      shippingAddressText,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: Colors.black87,
+                        height: 1.4,
+                      ),
+                    )
+                  else
+                    Text(
+                      'Silahkan set atau tambahkan alamat pengiriman anda',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.grey[500],
+                        fontStyle: FontStyle.italic,
+                        height: 1.4,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right, color: Colors.grey),
+          ],
+        ),
       ),
     );
+  }
+
+  void _showNoAddressWarning() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: Colors.white),
+            SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'Silahkan pilih atau tambahkan alamat pengiriman terlebih dahulu',
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: Colors.orange[700],
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        action: SnackBarAction(
+          label: 'Tambah',
+          textColor: Colors.white,
+          onPressed: () => _selectAddress(),
+        ),
+      ),
+    );
+  }
+
+  void _selectAddress() async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const ShippingAddressPage(isSelecting: true),
+      ),
+    );
+
+    if (result != null && result is ShippingAddress) {
+      setState(() {
+        selectedAddress = result;
+      });
+    }
   }
 
   Widget _buildProductsSection() {
@@ -163,7 +309,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
       child: Column(
         children: [
           // Products List
-          ...widget.items.map((item) => _buildProductItem(item)).toList(),
+          ...items.map((item) => _buildProductItem(item)).toList(),
 
           const SizedBox(height: 16),
           const Divider(height: 1),
@@ -174,7 +320,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Total ${widget.items.length} Produk',
+                'Total ${items.length} Produk',
                 style: const TextStyle(fontSize: 14, color: Colors.black87),
               ),
               Text(
@@ -292,11 +438,11 @@ class _CheckoutPageState extends State<CheckoutPage> {
 
           const SizedBox(height: 12),
 
-          // DANA Option
+          // E-Wallet Option
           _buildPaymentOption(
-            'DANA',
-            'DANA',
-            Icons.account_balance_wallet_outlined,
+            'E-Wallet',
+            'E-Wallet',
+            Icons.credit_card,
           ),
         ],
       ),
@@ -497,7 +643,14 @@ class _CheckoutPageState extends State<CheckoutPage> {
                             color: Colors.white,
                             size: 28,
                           ),
-                          onPressed: () {},
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const ProfilePage(),
+                              ),
+                            );
+                          },
                         ),
                       ),
                     ],
@@ -530,7 +683,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
                   ],
                 ),
                 child: const Icon(
-                  Icons.shopping_cart,
+                  Icons.payments,
                   color: Colors.white,
                   size: 28,
                 ),
@@ -543,11 +696,9 @@ class _CheckoutPageState extends State<CheckoutPage> {
   }
 
   void _confirmCheckout() async {
-    // Get IDs of all items being checked out
-    final itemIds = widget.items.map((item) => item.id).toList();
-
-    // Remove items from cart
-    await CartService.removeSelectedItems(itemIds);
+    final selectedIds = items.map((e) => e.id).toList();
+    await CartService.removeSelectedItems(selectedIds);
+    await CheckoutService.clearCheckout();
 
     if (!mounted) return;
 
@@ -559,7 +710,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
           children: [
             Icon(Icons.check_circle, color: Color(0xFF4CAF50), size: 28),
             SizedBox(width: 12),
-            Text('Order Confirmed', style: TextStyle(fontSize: 18)),
+            Text('Order Confirmed'),
           ],
         ),
         content: Column(
@@ -567,12 +718,29 @@ class _CheckoutPageState extends State<CheckoutPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'Your order has been placed successfully!',
+              'Pesanan kamu berhasil dibuat!',
               style: TextStyle(fontSize: 14),
             ),
             const SizedBox(height: 12),
+            if (hasAddress) ...[
+              Text(
+                'Alamat Pengiriman:',
+                style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                '${selectedAddress!.address}, ${selectedAddress!.city}',
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 8),
+            ],
             Text(
-              'Payment Method: $selectedPaymentMethod',
+              'Metode Pembayaran: $selectedPaymentMethod',
               style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
             ),
             const SizedBox(height: 4),
@@ -589,14 +757,11 @@ class _CheckoutPageState extends State<CheckoutPage> {
         actions: [
           ElevatedButton(
             onPressed: () {
-              Navigator.pop(context);
-              Navigator.pop(context); // Back to previous page
+              Navigator.pop(context); // close dialog
+              Navigator.popUntil(context, (route) => route.isFirst);
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF8B1A1A),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
             ),
             child: const Text('OK', style: TextStyle(color: Colors.white)),
           ),
@@ -685,7 +850,6 @@ class BottomNavBarPainter extends CustomPainter {
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
-// Checkout Item Model
 class CheckoutItem {
   final String id;
   final String name;

@@ -1,0 +1,7 @@
+storePassword=<your-keystore-password>
+keyPassword=<your-key-password>
+keyAlias=<your-key-alias>
+storeFile=release-key.jks
+
+# Instructions: copy this file to `key.properties` (same folder as `pubspec.yaml`),
+# then replace placeholders with real values. Do NOT commit `key.properties` to git.

@@ -23,9 +23,10 @@ class CartService {
     }
 
     // Check if item with same product and size already exists
-    int existingIndex = cartItems.indexWhere(
-      (item) => item['id'] == productId && item['size'] == size,
-    );
+    final uniqueId = '${productId}_$size';
+
+    int existingIndex = cartItems.indexWhere((item) => item['id'] == uniqueId);
+
 
     if (existingIndex != -1) {
       // Item exists, increment quantity

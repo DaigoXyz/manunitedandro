@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'register_page.dart';
 import 'dashboard_page.dart';
+import '../services/apiservice.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -29,7 +30,7 @@ class _LoginPageState extends State<LoginPage> {
     }
 
     try {
-      final url = Uri.parse("http://10.250.92.85:8080/api/login");
+      final url = Uri.parse(ApiService.url("login"));
       final response = await http.post(
         url,
         headers: {"Content-Type": "application/json"},

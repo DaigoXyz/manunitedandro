@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'editprofile.dart';
 import 'orderhistory.dart';
 import 'wishlist.dart';
+import 'checkout.dart';
+import '../services/apiservice.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'dart:io';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ProfilePage extends StatefulWidget {
@@ -18,10 +21,15 @@ class _ProfilePageState extends State<ProfilePage> {
   String userEmail = '';
   String userPhone = '';
   bool isLoading = true;
+  String? profileImagePath;
 
   Future<void> loadUserData() async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString("jwt_token");
+    final savedImage = prefs.getString("local_profile_image");
+    setState(() {
+      profileImagePath = savedImage;
+    });
 
     if (token == null) {
       print("Token kosong");
@@ -29,7 +37,7 @@ class _ProfilePageState extends State<ProfilePage> {
     }
 
     try {
-      final url = Uri.parse("http://10.250.92.85:8080/api/me");
+      final url = Uri.parse(ApiService.url("me"));
 
       final response = await http.get(
         url,
@@ -66,7 +74,7 @@ class _ProfilePageState extends State<ProfilePage> {
     }
 
     try {
-      final url = Uri.parse("http://10.250.92.85:8080/api/logout");
+      final url = Uri.parse(ApiService.url("logout"));
 
       final response = await http.post(
         url,
@@ -217,28 +225,13 @@ class _ProfilePageState extends State<ProfilePage> {
                 child: CircleAvatar(
                   radius: 38,
                   backgroundColor: Colors.grey[300],
-                  backgroundImage: const AssetImage(
-                    'assets/images/profile.png',
-                  ),
-                  onBackgroundImageError: (_, __) {},
-                ),
-              ),
-              Positioned(
-                bottom: 0,
-                right: 0,
-                child: Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Color(0xFFE53935), width: 2),
-                  ),
-                  child: const Icon(
-                    Icons.camera_alt,
-                    size: 16,
-                    color: Color(0xFFE53935),
-                  ),
-                ),
+                  backgroundImage:
+                      (profileImagePath != null &&
+                          File(profileImagePath!).existsSync())
+                      ? FileImage(File(profileImagePath!))
+                      : const AssetImage('assets/images/profile.png')
+                            as ImageProvider,
+                )
               ),
             ],
           ),
@@ -355,11 +348,18 @@ class _ProfilePageState extends State<ProfilePage> {
                     Expanded(
                       child: IconButton(
                         icon: Icon(
-                          Icons.local_offer_outlined,
+                          Icons.payments,
                           color: Colors.white,
                           size: 28,
                         ),
-                        onPressed: () {},
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const CheckoutPage(),
+                            ),
+                          );
+                        },
                       ),
                     ),
                     Expanded(

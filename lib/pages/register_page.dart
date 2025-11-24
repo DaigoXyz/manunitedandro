@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'login_page.dart';
+import '../services/authservice.dart'; // ← TAMBAHAN
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -9,11 +9,99 @@ class RegisterPage extends StatefulWidget {
 }
 
 class _RegisterPageState extends State<RegisterPage> {
-  final namaController = TextEditingController();
-  final usernameController = TextEditingController();
+  final namecontroller = TextEditingController();
+  final phonecontroller = TextEditingController();
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
   bool _obscurePassword = true;
+
+  bool isLoading = false; 
+
+  bool validatePassword(String password) {
+    final passwordRegex = RegExp(
+      r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[A-Za-z\d]{8,}$',
+    );
+    return passwordRegex.hasMatch(password);
+  }
+
+void showPasswordErrorPopup() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(15),
+          ),
+          title: const Text(
+            "Password Tidak Valid",
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF8B1A1A),
+            ),
+          ),
+          content: const Text(
+            "Password minimal 8 karakter,\nharus ada huruf besar,\nharus ada huruf kecil,\ndan harus mengandung angka.",
+            style: TextStyle(fontSize: 14),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text(
+                "OK",
+                style: TextStyle(
+                  color: Color(0xFF8B1A1A),
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> handleRegister() async {
+    final name = namecontroller.text.trim();
+    final email = emailController.text.trim();
+    final phone = phonecontroller.text.trim(); // karena backend butuh phone
+    final password = passwordController.text.trim();
+
+    if (name.isEmpty || email.isEmpty || phone.isEmpty || password.isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Semua field harus diisi")));
+      return;
+    }
+
+    if (!validatePassword(password)) {
+      showPasswordErrorPopup();
+      return;
+    }
+
+    setState(() => isLoading = true);
+
+    try {
+      await AuthService.register(
+        name: name,
+        email: email,
+        phone: phone,
+        password: password,
+      );
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Registrasi berhasil, silakan login")),
+      );
+
+      Navigator.pop(context); // kembali ke login
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Gagal register: $e")));
+    }
+
+    setState(() => isLoading = false);
+  }
+  
 
   @override
   Widget build(BuildContext context) {
@@ -72,13 +160,13 @@ class _RegisterPageState extends State<RegisterPage> {
 
                       // Nama Lengkap Field
                       TextField(
-                        controller: namaController,
+                        controller: namecontroller,
                         decoration: InputDecoration(
                           prefixIcon: const Icon(
                             Icons.person_outline,
                             color: Colors.grey,
                           ),
-                          hintText: 'Nama Lengkap',
+                          hintText: 'Nama/Username',
                           hintStyle: const TextStyle(color: Colors.grey),
                           filled: true,
                           fillColor: Colors.white,
@@ -112,15 +200,15 @@ class _RegisterPageState extends State<RegisterPage> {
 
                       const SizedBox(height: 20),
 
-                      // Username Field
+                      // Username Field (kita jadikan sebagai phone)
                       TextField(
-                        controller: usernameController,
+                        controller: phonecontroller,
                         decoration: InputDecoration(
                           prefixIcon: const Icon(
                             Icons.person_outline,
                             color: Colors.grey,
                           ),
-                          hintText: 'Username',
+                          hintText: 'Phone',
                           hintStyle: const TextStyle(color: Colors.grey),
                           filled: true,
                           fillColor: Colors.white,
@@ -257,10 +345,7 @@ class _RegisterPageState extends State<RegisterPage> {
                         width: double.infinity,
                         height: 55,
                         child: ElevatedButton(
-                          onPressed: () {
-                            // Handle register logic
-                            Navigator.pop(context);
-                          },
+                          onPressed: isLoading ? null : handleRegister,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFF8B1A1A),
                             shape: RoundedRectangleBorder(
@@ -268,14 +353,18 @@ class _RegisterPageState extends State<RegisterPage> {
                             ),
                             elevation: 0,
                           ),
-                          child: const Text(
-                            'Create Account',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
+                          child: isLoading
+                              ? const CircularProgressIndicator(
+                                  color: Colors.white,
+                                )
+                              : const Text(
+                                  'Create Account',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                  ),
+                                ),
                         ),
                       ),
 

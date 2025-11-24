@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'productdetail.dart';
 import 'cart.dart';
 import 'profile.dart';
+import 'checkout.dart';
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
@@ -622,11 +623,18 @@ final List<Map<String, dynamic>> products = [
                       Expanded(
                         child: IconButton(
                           icon: const Icon(
-                            Icons.local_offer_outlined,
+                            Icons.payments,
                             color: Colors.white,
                             size: 26,
                           ),
-                          onPressed: () {},
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const CheckoutPage(),
+                              ),
+                            );
+                          },
                         ),
                       ),
 
