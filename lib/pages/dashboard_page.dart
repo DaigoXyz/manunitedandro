@@ -3,6 +3,7 @@ import 'productdetail.dart';
 import 'cart.dart';
 import 'profile.dart';
 import 'checkout.dart';
+import '../services/profileservice.dart';
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
@@ -16,6 +17,8 @@ class _DashboardPageState extends State<DashboardPage> {
   String selectedGender = 'Woman';
   String searchQuery = '';
   int currentBannerIndex = 0;
+  String name = "";
+
 
   final List<Map<String, dynamic>> banners = [
     {
@@ -88,6 +91,25 @@ final List<Map<String, dynamic>> products = [
       return matchesCategory && matchesGender && matchesSearch;
     }).toList();
   }
+  @override
+  void initState() {
+    super.initState();
+    fetchProfile();
+  }
+
+  Future<void> fetchProfile() async {
+    try {
+      final profile = await ProfileService.getMyProfile();
+      setState(() {
+        name = profile["name"] ?? "User";
+      });
+    } catch (e) {
+      setState(() {
+        name = "User";
+      });
+    }
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -115,17 +137,17 @@ final List<Map<String, dynamic>> products = [
                   ),
                   const SizedBox(width: 12),
                   // Greeting
-                  const Expanded(
+                  Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
+                        const Text(
                           'Hello, Devils!',
                           style: TextStyle(fontSize: 14, color: Colors.black54),
                         ),
                         Text(
-                          'John Doe',
-                          style: TextStyle(
+                          name.isEmpty ? "Loading..." : name,
+                          style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
                             color: Colors.black,
